@@ -1,6 +1,6 @@
 import axios from 'axios'
 import React, { useState, useEffect } from 'react'
-import { FaTemperatureHigh, FaWind, FaTint, FaLocationArrow, FaSpinner, FaSearch } from 'react-icons/fa'
+import { FaWind, FaTint, FaLocationArrow, FaSpinner, FaSearch } from 'react-icons/fa'
 import { WiDaySunny, WiRain, WiSnow, WiThunderstorm, WiFog, WiCloudy, WiDayCloudy } from 'react-icons/wi'
 
 interface Props {
