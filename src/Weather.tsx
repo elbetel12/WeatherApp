@@ -1,7 +1,7 @@
 import axios from 'axios'
 import React, { useState, useEffect } from 'react'
-import { FaTemperatureHigh, FaWind, FaTint, FaLocationArrow, FaSpinner } from 'react-icons/fa'
-import { WiDaySunny, WiRain, WiSnow, WiThunderstorm, WiFog, WiCloudy } from 'react-icons/wi'
+import { FaTemperatureHigh, FaWind, FaTint, FaLocationArrow, FaSpinner, FaSearch } from 'react-icons/fa'
+import { WiDaySunny, WiRain, WiSnow, WiThunderstorm, WiFog, WiCloudy, WiDayCloudy } from 'react-icons/wi'
 
 interface Props {
   name: string;
@@ -46,12 +46,25 @@ function Weather() {
 
   const getWeatherIcon = (weatherMain: string) => {
     switch (weatherMain) {
-      case 'Clear': return <WiDaySunny className="text-5xl text-yellow-500" />;
-      case 'Rain': return <WiRain className="text-5xl text-blue-500" />;
+      case 'Clear': return <WiDaySunny className="text-5xl text-yellow-400" />;
+      case 'Rain': return <WiRain className="text-5xl text-blue-400" />;
       case 'Snow': return <WiSnow className="text-5xl text-blue-300" />;
       case 'Thunderstorm': return <WiThunderstorm className="text-5xl text-purple-500" />;
       case 'Fog': return <WiFog className="text-5xl text-gray-400" />;
-      default: return <WiCloudy className="text-5xl text-gray-500" />;
+      case 'Clouds': return <WiDayCloudy className="text-5xl text-gray-100" />;
+      default: return <WiCloudy className="text-5xl text-gray-300" />;
+    }
+  };
+
+  const getLargeWeatherIcon = (weatherMain: string) => {
+    switch (weatherMain) {
+      case 'Clear': return <WiDaySunny className="text-8xl text-yellow-400" />;
+      case 'Rain': return <WiRain className="text-8xl text-blue-400" />;
+      case 'Snow': return <WiSnow className="text-8xl text-blue-300" />;
+      case 'Thunderstorm': return <WiThunderstorm className="text-8xl text-purple-500" />;
+      case 'Fog': return <WiFog className="text-8xl text-gray-400" />;
+      case 'Clouds': return <WiDayCloudy className="text-8xl text-gray-100" />;
+      default: return <WiCloudy className="text-8xl text-gray-300" />;
     }
   };
 
@@ -114,6 +127,11 @@ function Weather() {
     if (savedHistory) {
       setSearchHistory(JSON.parse(savedHistory));
     }
+    
+    // Initial weather fetch for a default city
+    if (!weather) {
+      fetchWeatherData('New York');
+    }
   }, []);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -125,41 +143,23 @@ function Weather() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-400 to-blue-600 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow-xl p-6 mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-2xl font-bold text-gray-800">Weather Forecast</h1>
-            <button
-              onClick={() => setIsCelsius(!isCelsius)}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
-            >
-              {isCelsius ? '°C' : '°F'}
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="flex gap-4">   
+    <div className="min-h-screen bg-indigo-100 flex items-center justify-center py-12 px-4">
+      <div className="max-w-md w-full bg-indigo-600 rounded-3xl shadow-xl overflow-hidden">
+        <div className="p-6">
+          <form onSubmit={handleSubmit} className="flex mb-6 bg-white rounded-full overflow-hidden">   
             <input 
               type='text' 
-              placeholder='Enter city name' 
+              placeholder='Search' 
               value={city} 
               onChange={(e) => setCity(e.target.value)}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="flex-1 px-4 py-2 border-none focus:outline-none"
             />
             <button 
               type="submit"
-              className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="px-4 py-2 focus:outline-none"
               disabled={loading}
             >
-              {loading ? <FaSpinner className="animate-spin" /> : 'Search'}
-            </button>
-            <button
-              type="button"
-              onClick={getCurrentLocation}
-              className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-              disabled={loading}
-            >
-              <FaLocationArrow />
+              {loading ? <FaSpinner className="text-gray-500 animate-spin" /> : <FaSearch className="text-gray-500" />}
             </button>
           </form>
 
@@ -169,93 +169,91 @@ function Weather() {
             </div>
           )}
 
-          {searchHistory.length > 0 && (
-            <div className="mt-4">
-              <h2 className="text-sm font-semibold text-gray-600 mb-2">Recent Searches</h2>
-              <div className="flex flex-wrap gap-2">
-                {searchHistory.map((city, index) => (
-                  <button
-                    key={index}
-                    onClick={() => fetchWeatherData(city)}
-                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors duration-200"
-                  >
-                    {city}
-                  </button>
-                ))}
+          {weather && (
+            <>
+              <div className="flex flex-col items-center">
+                <div className="mb-2">
+                  {getLargeWeatherIcon(weather.weather[0].main)}
+                </div>
+                <h1 className="text-6xl font-bold text-white mb-1">
+                  {Math.round(convertTemp(weather.main.temp))}°{isCelsius ? 'C' : 'F'}
+                </h1>
+                <h2 className="text-2xl text-white mb-6">{weather.name}</h2>
+                
+                <div className="flex justify-between w-full">
+                  <div className="flex items-center text-white">
+                    <FaTint className="mr-2" />
+                    <div>
+                      <p>{weather.main.humidity}%</p>
+                      <p className="text-sm text-gray-300">Humidity</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center text-white">
+                    <FaWind className="mr-2" />
+                    <div>
+                      <p>{weather.wind.speed} km/h</p>
+                      <p className="text-sm text-gray-300">Wind Speed</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            </>
           )}
         </div>
-
-        {weather && (
-          <>
-            <div className="bg-white rounded-lg shadow-xl p-8 mb-8">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h1 className="text-4xl font-bold text-gray-800 mb-2">
-                    {weather.name}, {weather.sys.country}
-                  </h1>
-                  <p className="text-xl text-gray-600 capitalize">
-                    {weather.weather[0].description}
+        
+        {searchHistory.length > 0 && (
+          <div className="p-4 bg-indigo-700">
+            <h2 className="text-sm font-semibold text-indigo-200 mb-2">Recent Searches</h2>
+            <div className="flex flex-wrap gap-2">
+              {searchHistory.map((city, index) => (
+                <button
+                  key={index}
+                  onClick={() => fetchWeatherData(city)}
+                  className="px-3 py-1 bg-indigo-500 text-white rounded-full text-sm hover:bg-indigo-400 transition-colors duration-200"
+                >
+                  {city}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {forecast.length > 0 && (
+          <div className="p-4 bg-indigo-500">
+            <h2 className="text-sm font-semibold text-white mb-2">Forecast</h2>
+            <div className="grid grid-cols-5 gap-2">
+              {forecast.map((item, index) => (
+                <div key={index} className="text-center">
+                  <p className="text-xs text-indigo-200">
+                    {new Date(item.dt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                  <div className="my-1">
+                    {getWeatherIcon(item.weather[0].main)}
+                  </div>
+                  <p className="text-sm font-semibold text-white">
+                    {Math.round(convertTemp(item.main.temp))}°
                   </p>
                 </div>
-                <div className="text-6xl">
-                  {getWeatherIcon(weather.weather[0].main)}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-                <div className="bg-blue-50 rounded-lg p-6 flex items-center space-x-4">
-                  <FaTemperatureHigh className="text-3xl text-blue-500" />
-                  <div>
-                    <p className="text-sm text-gray-500">Temperature</p>
-                    <p className="text-2xl font-semibold text-gray-800">
-                      {Math.round(convertTemp(weather.main.temp))}°{isCelsius ? 'C' : 'F'}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Feels like: {Math.round(convertTemp(weather.main.feels_like))}°{isCelsius ? 'C' : 'F'}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="bg-blue-50 rounded-lg p-6 flex items-center space-x-4">
-                  <FaTint className="text-3xl text-blue-500" />
-                  <div>
-                    <p className="text-sm text-gray-500">Humidity</p>
-                    <p className="text-2xl font-semibold text-gray-800">{weather.main.humidity}%</p>
-                  </div>
-                </div>
-                
-                <div className="bg-blue-50 rounded-lg p-6 flex items-center space-x-4">
-                  <FaWind className="text-3xl text-blue-500" />
-                  <div>
-                    <p className="text-sm text-gray-500">Wind Speed</p>
-                    <p className="text-2xl font-semibold text-gray-800">{weather.wind.speed} m/s</p>
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
-
-            <div className="bg-white rounded-lg shadow-xl p-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">5-Hour Forecast</h2>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {forecast.map((item, index) => (
-                  <div key={index} className="bg-blue-50 rounded-lg p-4 text-center">
-                    <p className="text-sm text-gray-500">
-                      {new Date(item.dt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                    <div className="my-2">
-                      {getWeatherIcon(item.weather[0].main)}
-                    </div>
-                    <p className="text-lg font-semibold text-gray-800">
-                      {Math.round(convertTemp(item.main.temp))}°{isCelsius ? 'C' : 'F'}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
+          </div>
         )}
+        
+        <div className="p-2 bg-indigo-800 flex justify-center">
+          <button
+            onClick={() => setIsCelsius(!isCelsius)}
+            className="px-4 py-1 bg-indigo-600 text-white rounded-full text-sm hover:bg-indigo-500 transition-colors duration-200"
+          >
+            Switch to {isCelsius ? '°F' : '°C'}
+          </button>
+          <button
+            onClick={getCurrentLocation}
+            className="ml-4 px-4 py-1 bg-indigo-600 text-white rounded-full text-sm hover:bg-indigo-500 transition-colors duration-200"
+          >
+            <FaLocationArrow className="inline mr-1" /> My Location
+          </button>
+        </div>
       </div>
     </div>
   );
