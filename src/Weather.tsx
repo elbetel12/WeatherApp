@@ -1,6 +1,6 @@
 import axios from 'axios'
 import React, { useState, useEffect } from 'react'
-import { FaWind, FaTint, FaLocationArrow, FaSpinner, FaSearch } from 'react-icons/fa'
+import { FaWind, FaTint, FaLocationArrow, FaSpinner, FaSearch, FaThermometerHalf, FaEye } from 'react-icons/fa'
 import { WiDaySunny, WiRain, WiSnow, WiThunderstorm, WiFog, WiCloudy, WiDayCloudy } from 'react-icons/wi'
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
     temp: number;
     humidity: number;
     feels_like: number;
+    pressure: number;
   };
   weather: {
     description: string;
@@ -20,18 +21,26 @@ interface Props {
   };
   sys: {
     country: string;
+    sunrise: number;
+    sunset: number;
   };
+  visibility: number;
 }
 
 interface ForecastProps {
   dt: number;
   main: {
     temp: number;
+    humidity: number;
   };
   weather: {
     icon: string;
     main: string;
+    description: string;
   }[];
+  wind: {
+    speed: number;
+  };
 }
 
 function Weather() {
@@ -42,6 +51,7 @@ function Weather() {
   const [error, setError] = useState<string>("");
   const [isCelsius, setIsCelsius] = useState<boolean>(true);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [showDetails, setShowDetails] = useState<boolean>(false);
   const apiKey = '83c432e9428909741098643d5a4bc8d5';
 
   const getWeatherIcon = (weatherMain: string) => {
@@ -72,6 +82,21 @@ function Weather() {
     return isCelsius ? temp : (temp * 9/5) + 32;
   };
 
+  const formatTime = (timestamp: number) => {
+    return new Date(timestamp * 1000).toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  const getTimeOfDay = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return 'Good Morning';
+    if (hour >= 12 && hour < 17) return 'Good Afternoon';
+    if (hour >= 17 && hour < 21) return 'Good Evening';
+    return 'Good Night';
+  };
+
   const fetchWeatherData = async (cityName: string) => {
     try {
       setLoading(true);
@@ -90,8 +115,14 @@ function Weather() {
         localStorage.setItem('searchHistory', JSON.stringify(newHistory));
         return newHistory;
       });
-    } catch (err) {
-      setError("City not found. Please try again.");
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        setError("City not found. Please check the spelling and try again.");
+      } else if (err.response?.status === 429) {
+        setError("Too many requests. Please wait a moment and try again.");
+      } else {
+        setError("Network error. Please check your connection and try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -143,28 +174,32 @@ function Weather() {
   };
 
   return (
-    <div className="min-h-screen bg-indigo-100 flex items-center justify-center py-12 px-4">
-      <div className="max-w-md w-full bg-indigo-600 rounded-3xl shadow-xl overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100 flex items-center justify-center py-12 px-4">
+      <div className="max-w-md w-full bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl shadow-2xl overflow-hidden">
         <div className="p-6">
-          <form onSubmit={handleSubmit} className="flex mb-6 bg-white rounded-full overflow-hidden">   
+          <div className="text-center mb-4">
+            <h1 className="text-white text-sm opacity-80">{getTimeOfDay()}</h1>
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex mb-6 bg-white/20 backdrop-blur-sm rounded-full overflow-hidden border border-white/30">   
             <input 
               type='text' 
-              placeholder='Search' 
+              placeholder='Search for a city...' 
               value={city} 
               onChange={(e) => setCity(e.target.value)}
-              className="flex-1 px-4 py-2 border-none focus:outline-none"
+              className="flex-1 px-4 py-3 bg-transparent text-white placeholder-white/70 border-none focus:outline-none"
             />
             <button 
               type="submit"
-              className="px-4 py-2 focus:outline-none"
+              className="px-4 py-3 focus:outline-none hover:bg-white/10 transition-colors"
               disabled={loading}
             >
-              {loading ? <FaSpinner className="text-gray-500 animate-spin" /> : <FaSearch className="text-gray-500" />}
+              {loading ? <FaSpinner className="text-white animate-spin" /> : <FaSearch className="text-white" />}
             </button>
           </form>
 
           {error && (
-            <div className="mt-4 p-4 bg-red-100 text-red-700 rounded-lg">
+            <div className="mt-4 p-4 bg-red-500/20 backdrop-blur-sm text-red-100 rounded-lg border border-red-400/30">
               {error}
             </div>
           )}
@@ -172,45 +207,82 @@ function Weather() {
           {weather && (
             <>
               <div className="flex flex-col items-center">
-                <div className="mb-2">
+                <div className="mb-2 animate-pulse">
                   {getLargeWeatherIcon(weather.weather[0].main)}
                 </div>
                 <h1 className="text-6xl font-bold text-white mb-1">
                   {Math.round(convertTemp(weather.main.temp))}°{isCelsius ? 'C' : 'F'}
                 </h1>
-                <h2 className="text-2xl text-white mb-6">{weather.name}</h2>
+                <h2 className="text-2xl text-white mb-2">{weather.name}</h2>
+                <p className="text-white/80 capitalize mb-6">{weather.weather[0].description}</p>
                 
-                <div className="flex justify-between w-full">
+                <div className="flex justify-between w-full mb-4">
                   <div className="flex items-center text-white">
                     <FaTint className="mr-2" />
                     <div>
-                      <p>{weather.main.humidity}%</p>
-                      <p className="text-sm text-gray-300">Humidity</p>
+                      <p className="font-semibold">{weather.main.humidity}%</p>
+                      <p className="text-sm text-white/70">Humidity</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center text-white">
                     <FaWind className="mr-2" />
                     <div>
-                      <p>{weather.wind.speed} km/h</p>
-                      <p className="text-sm text-gray-300">Wind Speed</p>
+                      <p className="font-semibold">{weather.wind.speed} km/h</p>
+                      <p className="text-sm text-white/70">Wind Speed</p>
                     </div>
                   </div>
                 </div>
+
+                <button
+                  onClick={() => setShowDetails(!showDetails)}
+                  className="text-white/80 text-sm hover:text-white transition-colors"
+                >
+                  {showDetails ? 'Hide Details' : 'Show Details'}
+                </button>
+
+                {showDetails && (
+                  <div className="w-full mt-4 p-4 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
+                    <div className="grid grid-cols-2 gap-4 text-white">
+                      <div className="flex items-center">
+                        <FaThermometerHalf className="mr-2" />
+                        <div>
+                          <p className="text-sm text-white/70">Feels Like</p>
+                          <p className="font-semibold">{Math.round(convertTemp(weather.main.feels_like))}°</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <FaEye className="mr-2" />
+                        <div>
+                          <p className="text-sm text-white/70">Visibility</p>
+                          <p className="font-semibold">{(weather.visibility / 1000).toFixed(1)} km</p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm text-white/70">Sunrise</p>
+                        <p className="font-semibold">{formatTime(weather.sys.sunrise)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-white/70">Sunset</p>
+                        <p className="font-semibold">{formatTime(weather.sys.sunset)}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}
         </div>
         
         {searchHistory.length > 0 && (
-          <div className="p-4 bg-indigo-700">
+          <div className="p-4 bg-indigo-700/50 backdrop-blur-sm">
             <h2 className="text-sm font-semibold text-indigo-200 mb-2">Recent Searches</h2>
             <div className="flex flex-wrap gap-2">
               {searchHistory.map((city, index) => (
                 <button
                   key={index}
                   onClick={() => fetchWeatherData(city)}
-                  className="px-3 py-1 bg-indigo-500 text-white rounded-full text-sm hover:bg-indigo-400 transition-colors duration-200"
+                  className="px-3 py-1 bg-indigo-500/50 text-white rounded-full text-sm hover:bg-indigo-400/50 transition-colors duration-200 backdrop-blur-sm"
                 >
                   {city}
                 </button>
@@ -220,8 +292,8 @@ function Weather() {
         )}
         
         {forecast.length > 0 && (
-          <div className="p-4 bg-indigo-500">
-            <h2 className="text-sm font-semibold text-white mb-2">Forecast</h2>
+          <div className="p-4 bg-indigo-500/50 backdrop-blur-sm">
+            <h2 className="text-sm font-semibold text-white mb-2">5-Hour Forecast</h2>
             <div className="grid grid-cols-5 gap-2">
               {forecast.map((item, index) => (
                 <div key={index} className="text-center">
@@ -240,16 +312,16 @@ function Weather() {
           </div>
         )}
         
-        <div className="p-2 bg-indigo-800 flex justify-center">
+        <div className="p-3 bg-indigo-800/50 backdrop-blur-sm flex justify-center gap-2">
           <button
             onClick={() => setIsCelsius(!isCelsius)}
-            className="px-4 py-1 bg-indigo-600 text-white rounded-full text-sm hover:bg-indigo-500 transition-colors duration-200"
+            className="px-4 py-1 bg-indigo-600/50 text-white rounded-full text-sm hover:bg-indigo-500/50 transition-colors duration-200 backdrop-blur-sm"
           >
             Switch to {isCelsius ? '°F' : '°C'}
           </button>
           <button
             onClick={getCurrentLocation}
-            className="ml-4 px-4 py-1 bg-indigo-600 text-white rounded-full text-sm hover:bg-indigo-500 transition-colors duration-200"
+            className="px-4 py-1 bg-indigo-600/50 text-white rounded-full text-sm hover:bg-indigo-500/50 transition-colors duration-200 backdrop-blur-sm"
           >
             <FaLocationArrow className="inline mr-1" /> My Location
           </button>
